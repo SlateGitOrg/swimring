@@ -187,16 +187,14 @@ func (n *Network) send(src *Host, to string, payload []byte) {
 // Host is one simulated endpoint. It implements transport.Transport and
 // provides a per-host clock that honours crashes and processing lag.
 type Host struct {
-	addr    string
-	net     *Network
-	handler transport.Handler
-	down    bool
-	closed  bool
-	lag     time.Duration
-	// busyUntil models a single-threaded receive loop: with lag > 0 each
-	// inbound packet occupies the host for lag before the next is handled.
-	busyUntil time.Time
-	received  uint64
+	addr     string
+	net      *Network
+	handler  transport.Handler
+	down     bool
+	closed   bool
+	lag      time.Duration
+	timerLag time.Duration
+	received uint64
 }
 
 var _ transport.Transport = (*Host)(nil)
@@ -234,25 +232,25 @@ func (h *Host) Crash() { h.down = true }
 // Down reports whether the host has crashed.
 func (h *Host) Down() bool { return h.down }
 
-// SetLag makes the host slow: every inbound packet and every timer callback
-// is processed lag late, and inbound packets queue behind one another. This
-// models a CPU-starved or GC-pausing process, the failure mode Lifeguard
-// targets.
-func (h *Host) SetLag(lag time.Duration) {
-	if lag < 0 {
-		lag = 0
-	}
-	h.lag = lag
-}
+// SetLag makes the host slow to process inbound packets: each packet is
+// handed to the handler lag after it arrives (FIFO order is preserved).
+// Combined with on-time timers this models a process whose receive path is
+// starved, e.g. by CPU contention or GC pauses: its own timeouts fire before
+// it gets to read the replies. This is the failure mode Lifeguard targets.
+func (h *Host) SetLag(lag time.Duration) { h.lag = max(lag, 0) }
 
-// Lag returns the configured processing lag.
+// SetTimerLag delays every timer callback scheduled through the host's
+// Clock by lag (a process that is late to wake up).
+func (h *Host) SetTimerLag(lag time.Duration) { h.timerLag = max(lag, 0) }
+
+// Lag returns the inbound processing lag.
 func (h *Host) Lag() time.Duration { return h.lag }
 
 // Received returns the number of packets handed to the handler.
 func (h *Host) Received() uint64 { return h.received }
 
-// Clock returns a clock whose timers fire lag late and never fire after the
-// host has crashed.
+// Clock returns a clock whose timers fire timerLag late and never fire
+// after the host has crashed.
 func (h *Host) Clock() clock.Clock { return hostClock{h} }
 
 func (h *Host) arrive(from string, payload []byte) {
@@ -264,14 +262,7 @@ func (h *Host) arrive(from string, payload []byte) {
 		h.deliver(from, payload)
 		return
 	}
-	now := h.net.sim.now
-	start := now
-	if h.busyUntil.After(start) {
-		start = h.busyUntil
-	}
-	done := start.Add(h.lag)
-	h.busyUntil = done
-	h.net.sim.Schedule(done.Sub(now), func() {
+	h.net.sim.Schedule(h.lag, func() {
 		if h.down || h.closed {
 			h.net.stats.DroppedDown++
 			return
@@ -294,7 +285,7 @@ func (c hostClock) Now() time.Time { return c.h.net.sim.now }
 
 func (c hostClock) AfterFunc(d time.Duration, f func()) clock.Timer {
 	h := c.h
-	return h.net.sim.Schedule(d+h.lag, func() {
+	return h.net.sim.Schedule(d+h.timerLag, func() {
 		if h.down {
 			return
 		}
