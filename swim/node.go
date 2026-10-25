@@ -204,6 +204,9 @@ func (n *Node) Start() error {
 		return ErrAlreadyStarted
 	}
 	n.started = true
+	// Announce ourselves: whoever we ping or answer learns that we are
+	// alive, so a join reaches members that the seed's gossip misses.
+	n.bq.Queue(n.self.toUpdate())
 	n.setTimer("tick", n.jitter(n.cfg.ProbeInterval), n.tick)
 	if n.cfg.PushPullInterval > 0 {
 		n.setTimer("pushpull", n.cfg.PushPullInterval+n.jitter(n.cfg.PushPullInterval), n.pushPull)

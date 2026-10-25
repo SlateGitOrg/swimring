@@ -50,6 +50,13 @@ func (n *Node) applySelfUpdate(u update) {
 		return
 	}
 	if u.Incarnation < n.self.incarnation {
+		// The claimant holds a stale view that our earlier refutation never
+		// reached (its gossip budget ran out). Re-announce the current
+		// incarnation; with the buddy system this rides on the very ack
+		// that answers the claimant's ping.
+		if _, queued := n.bq.Pending(n.cfg.Name); !queued {
+			n.bq.Queue(n.self.toUpdate())
+		}
 		return
 	}
 	n.self.incarnation = u.Incarnation + 1
