@@ -3,6 +3,7 @@
 /dist/
 *.test
 *.out
-coverage.*
+/coverage.out
+/coverage.html
 /results/*.tmp
 .DS_Store
