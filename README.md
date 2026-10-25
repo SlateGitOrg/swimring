@@ -331,7 +331,7 @@ other jobs, so treat these as orders of magnitude):
 property (`testing/quick` and seeded loops) and fuzz-seed tests under the
 race detector. It then enforces the coverage gate with
 `go test -coverpkg=./,./clock,./transport,./sim,./swim,./ring,./cache,./experiment -coverprofile=coverage.out ./...`
-followed by `scripts/coverage.sh`. Core coverage at the last run: **94.4%**
+followed by `scripts/coverage.sh`. Core coverage: **94.4%** on the fresh-clone run and 94.5% on the next local run (the loopback UDP tests run on the wall clock, so coverage moves by about 0.1 point between runs)
 (the CLI is excluded from the gate).
 
 ## Design decisions
