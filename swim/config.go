@@ -107,7 +107,11 @@ type Config struct {
 	// Logger receives debug and warning logs. Nil discards them.
 	Logger *slog.Logger
 	// Events, if non-nil, is called for every membership change. It is
-	// invoked without internal locks held, in the order changes happened.
+	// invoked without internal locks held, so it may call back into the
+	// node. Events from one packet or timer arrive in the order the changes
+	// happened; with the real clock, events from concurrent timers and
+	// packets may interleave, so consumers should re-read current state
+	// (Node.Member) rather than rely on global ordering.
 	Events func(Event)
 }
 
