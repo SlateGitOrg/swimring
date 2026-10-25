@@ -1,0 +1,8 @@
+# build output
+/bin/
+/dist/
+*.test
+*.out
+coverage.*
+/results/*.tmp
+.DS_Store
