@@ -21,10 +21,11 @@ import (
 // Every packet type can carry piggybacked updates; a sync packet's updates
 // are a chunk of the sender's full membership table.
 
+const wireVersion byte = 1
+
 const (
-	wireVersion   byte = 1
-	maxStringLen       = 255
-	minPacketSize      = 512
+	maxStringLen  = 255
+	minPacketSize = 512
 	// minUpdateLen is the smallest possible encoded update: kind, three
 	// empty strings and a one-byte incarnation.
 	minUpdateLen = 5

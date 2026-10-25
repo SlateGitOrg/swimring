@@ -36,7 +36,8 @@ func TestMuxRoutesByChannel(t *testing.T) {
 	var got1, got2 []string
 	mb.Channel(1).SetHandler(func(from string, p []byte) { got1 = append(got1, from+":"+string(p)) })
 	mb.Channel(2).SetHandler(func(from string, p []byte) { got2 = append(got2, from+":"+string(p)) })
-	if ma.Channel(1) != ma.Channel(1) {
+	first, again := ma.Channel(1), ma.Channel(1)
+	if first != again {
 		t.Fatal("Channel must return the same instance")
 	}
 	if err := ma.Channel(1).Send("b", []byte("one")); err != nil {
