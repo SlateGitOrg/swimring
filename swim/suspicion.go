@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/archit2501/swimring/clock"
+	"github.com/SlateGitOrg/swimring/clock"
 )
 
 // suspicion tracks one outstanding suspicion and its Lifeguard dynamic

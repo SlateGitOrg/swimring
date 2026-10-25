@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/archit2501/swimring/swim"
+	"github.com/SlateGitOrg/swimring/swim"
 )
 
 // Variant names a protocol configuration under test.

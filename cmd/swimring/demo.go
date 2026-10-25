@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/archit2501/swimring"
-	"github.com/archit2501/swimring/cache"
-	"github.com/archit2501/swimring/clock"
-	"github.com/archit2501/swimring/sim"
-	"github.com/archit2501/swimring/swim"
-	"github.com/archit2501/swimring/transport"
+	"github.com/SlateGitOrg/swimring"
+	"github.com/SlateGitOrg/swimring/cache"
+	"github.com/SlateGitOrg/swimring/clock"
+	"github.com/SlateGitOrg/swimring/sim"
+	"github.com/SlateGitOrg/swimring/swim"
+	"github.com/SlateGitOrg/swimring/transport"
 )
 
 func runDemo(args []string, stdout, stderr io.Writer) error {

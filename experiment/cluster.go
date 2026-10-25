@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/archit2501/swimring/sim"
-	"github.com/archit2501/swimring/swim"
+	"github.com/SlateGitOrg/swimring/sim"
+	"github.com/SlateGitOrg/swimring/swim"
 )
 
 // ClusterSpec describes a simulated cluster.

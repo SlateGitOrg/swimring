@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/archit2501/swimring/experiment"
-	"github.com/archit2501/swimring/swim"
+	"github.com/SlateGitOrg/swimring/experiment"
+	"github.com/SlateGitOrg/swimring/swim"
 )
 
 // evalPlan holds the experiment grid; quick shrinks it for smoke runs.

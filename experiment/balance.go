@@ -5,7 +5,7 @@ import (
 	"math"
 	"math/rand/v2"
 
-	"github.com/archit2501/swimring/ring"
+	"github.com/SlateGitOrg/swimring/ring"
 )
 
 // BalanceSpec configures the ring balance measurement.

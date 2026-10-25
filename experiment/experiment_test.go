@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/archit2501/swimring/swim"
+	"github.com/SlateGitOrg/swimring/swim"
 )
 
 func TestAnalyticFormulas(t *testing.T) {

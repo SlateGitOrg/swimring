@@ -12,7 +12,7 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/archit2501/swimring/clock"
+	"github.com/SlateGitOrg/swimring/clock"
 )
 
 // Epoch is the virtual time at which every simulation starts. A fixed epoch

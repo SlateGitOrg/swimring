@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/archit2501/swimring/clock"
-	"github.com/archit2501/swimring/transport"
+	"github.com/SlateGitOrg/swimring/clock"
+	"github.com/SlateGitOrg/swimring/transport"
 )
 
 // Errors returned by Node methods.

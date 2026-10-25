@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/archit2501/swimring/sim"
-	"github.com/archit2501/swimring/swim"
-	"github.com/archit2501/swimring/transport"
+	"github.com/SlateGitOrg/swimring/sim"
+	"github.com/SlateGitOrg/swimring/swim"
+	"github.com/SlateGitOrg/swimring/transport"
 )
 
 // staticMembers is a two-member view: the coordinator and one peer.

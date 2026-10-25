@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/archit2501/swimring/sim"
+	"github.com/SlateGitOrg/swimring/sim"
 )
 
 var lan = sim.LinkConfig{Delay: 2 * time.Millisecond, Jitter: 3 * time.Millisecond}

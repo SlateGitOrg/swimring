@@ -1,6 +1,6 @@
 package swim
 
-import "github.com/archit2501/swimring/clock"
+import "github.com/SlateGitOrg/swimring/clock"
 
 // probeState is the in-flight probe of the current protocol period.
 type probeState struct {

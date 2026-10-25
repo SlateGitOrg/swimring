@@ -13,10 +13,10 @@ import (
 	"fmt"
 	"math/rand/v2"
 
-	"github.com/archit2501/swimring/cache"
-	"github.com/archit2501/swimring/clock"
-	"github.com/archit2501/swimring/swim"
-	"github.com/archit2501/swimring/transport"
+	"github.com/SlateGitOrg/swimring/cache"
+	"github.com/SlateGitOrg/swimring/clock"
+	"github.com/SlateGitOrg/swimring/swim"
+	"github.com/SlateGitOrg/swimring/transport"
 )
 
 // Channel tags on the shared transport.

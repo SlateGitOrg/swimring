@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/archit2501/swimring/experiment"
-	"github.com/archit2501/swimring/swim"
+	"github.com/SlateGitOrg/swimring/experiment"
+	"github.com/SlateGitOrg/swimring/swim"
 )
 
 func runSim(args []string, stdout, stderr io.Writer) error {

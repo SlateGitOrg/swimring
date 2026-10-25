@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/archit2501/swimring/sim"
+	"github.com/SlateGitOrg/swimring/sim"
 )
 
 func TestBroadcastQueueOrderingAndRetirement(t *testing.T) {

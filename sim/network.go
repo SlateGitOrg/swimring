@@ -6,8 +6,8 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/archit2501/swimring/clock"
-	"github.com/archit2501/swimring/transport"
+	"github.com/SlateGitOrg/swimring/clock"
+	"github.com/SlateGitOrg/swimring/transport"
 )
 
 // LinkConfig describes the behaviour of a directed link.

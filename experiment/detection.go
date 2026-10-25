@@ -5,8 +5,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/archit2501/swimring/sim"
-	"github.com/archit2501/swimring/swim"
+	"github.com/SlateGitOrg/swimring/sim"
+	"github.com/SlateGitOrg/swimring/swim"
 )
 
 // DetectionSpec configures the crash-detection experiment.

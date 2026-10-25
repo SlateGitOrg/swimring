@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/archit2501/swimring/clock"
+	"github.com/SlateGitOrg/swimring/clock"
 )
 
 // State is a member's liveness as seen by the local node.

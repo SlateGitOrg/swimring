@@ -1,5 +1,7 @@
 # swimring
 
+[![CI](https://github.com/SlateGitOrg/swimring/actions/workflows/ci.yml/badge.svg)](https://github.com/SlateGitOrg/swimring/actions/workflows/ci.yml)
+
 A from-scratch Go implementation of the **SWIM** gossip membership protocol
 with the **Lifeguard** extensions, a **consistent-hash ring** with virtual
 nodes, and a small **replicated cache** on top. It runs over real UDP or
@@ -12,14 +14,14 @@ the protocol against the analysis in the SWIM paper.
   simulator: nodes own no goroutines and take time from an injected clock.
 - Every number in this README comes from a committed command, shown next to it.
 
-## Who it is for
+## Why
 
 Engineers who want to see how a production-style membership layer works
 inside: how the failure detector, suspicion and incarnation numbers, gossip
 and Lifeguard's local-health logic fit together, and how membership drives
 data placement. It is also a test bench: change a parameter, rerun
 `make eval`, and get the same measurement tables on any machine.
-It is a portfolio and teaching project, not a replacement for
+It is a reference and teaching implementation, not a replacement for
 `hashicorp/memberlist` (see [Limitations](#limitations)).
 
 ## What is implemented
@@ -355,6 +357,21 @@ The full list, with the cost of each choice, is in [DECISIONS.md](DECISIONS.md).
 - **Suspect members keep their place on the ring.** Transient suspicions
   under loss do not shuffle data.
 
+## Project layout
+
+```text
+swimring.go       Node: SWIM + ring + cache wired onto one transport
+swim/             failure detector, suspicion, gossip, Lifeguard, anti-entropy
+ring/             consistent-hash ring with virtual nodes
+cache/            quorum-replicated cache (LWW, read repair, hand-off)
+transport/        UDP transport and channel mux
+sim/              deterministic network simulator and virtual clock
+clock/            injectable clock (real and virtual)
+experiment/       seeded experiments behind results/EVAL.md
+cmd/swimring/     CLI: sim, eval, demo, node
+docs/             ARCHITECTURE.md; DECISIONS.md records design rulings
+```
+
 ## Limitations
 
 - **The evaluation is simulated.** Loss is independent and uniform. The
@@ -408,4 +425,4 @@ seeded simulator in this repository.
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

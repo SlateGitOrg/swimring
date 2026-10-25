@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/archit2501/swimring/sim"
+	"github.com/SlateGitOrg/swimring/sim"
 )
 
 // testCluster is a simulated cluster used by the protocol tests.

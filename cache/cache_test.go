@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/archit2501/swimring"
-	"github.com/archit2501/swimring/cache"
-	"github.com/archit2501/swimring/sim"
-	"github.com/archit2501/swimring/swim"
+	"github.com/SlateGitOrg/swimring"
+	"github.com/SlateGitOrg/swimring/cache"
+	"github.com/SlateGitOrg/swimring/sim"
+	"github.com/SlateGitOrg/swimring/swim"
 )
 
 type cluster struct {

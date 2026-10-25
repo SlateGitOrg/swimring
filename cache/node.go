@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/archit2501/swimring/clock"
-	"github.com/archit2501/swimring/ring"
-	"github.com/archit2501/swimring/swim"
-	"github.com/archit2501/swimring/transport"
+	"github.com/SlateGitOrg/swimring/clock"
+	"github.com/SlateGitOrg/swimring/ring"
+	"github.com/SlateGitOrg/swimring/swim"
+	"github.com/SlateGitOrg/swimring/transport"
 )
 
 // Limits keep every request inside one datagram.

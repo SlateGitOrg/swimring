@@ -3,7 +3,7 @@ package experiment
 import (
 	"fmt"
 
-	"github.com/archit2501/swimring/swim"
+	"github.com/SlateGitOrg/swimring/swim"
 )
 
 // FalsePositiveSpec configures the healthy-cluster loss experiment.
