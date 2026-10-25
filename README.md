@@ -371,7 +371,11 @@ The full list, with the cost of each choice, is in [DECISIONS.md](DECISIONS.md).
 - **The cache is a demonstration, not a database.** Data lives in memory
   only. Concurrent writes to one key are resolved by last-writer-wins on
   Lamport versions, so one of them silently loses; there are no vector
-  clocks or siblings. There is no hinted hand-off: a write that reaches
+  clocks or siblings. Writes that are ordered in real time are not lost:
+  a replica only acknowledges a version it holds, and a coordinator whose
+  counter is behind retries with a higher version (this relies on
+  W > N/2 and holds while the key's replica set is unchanged). Writers
+  racing on one key can exhaust the retries and get `ErrConflict`. There is no hinted hand-off: a write that reaches
   fewer than W replicas fails. Tombstones expire after a TTL, so a replica
   partitioned for longer than that can resurrect a deleted key. Values are
   limited to 1 KiB so that a request fits in one datagram.

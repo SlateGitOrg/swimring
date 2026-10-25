@@ -226,6 +226,20 @@ Versions are Lamport counters with the coordinator name as tie-breaker;
 replicas keep the larger version (last writer wins). Deletes write
 tombstones that expire after `TombstoneTTL`.
 
+A replica acknowledges a put only when it now holds the version it was sent.
+If it holds a newer one, it answers `OK=false` with that version (the
+`putResp` carries the replica's held version). The coordinator then moves its
+counter past it and re-issues the write with a fresh version, at most 4
+attempts within `RequestTimeout`, after which it fails with `ErrConflict`.
+Replies to an earlier attempt are ignored. Without this, a coordinator
+whose counter was behind could have its later write rejected by every
+replica and still report success. Because W > N/2, any acknowledged write
+shares a replica with the previous acknowledged write to the key, so a write
+that starts after another was acknowledged always ends with the higher
+version. This holds while the key's replica set does not change; hand-off
+during a membership change is not covered. Hand-off treats "holds this
+version or a newer one" as an ack before dropping a copy it no longer owns.
+
 When SWIM reports a membership change, the cache re-reads the member's
 current state, updates its ring, and after `RebalanceDelay` (debounce)
 **hands off**: for each local key it pushes the entry to replicas that were
