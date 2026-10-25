@@ -37,8 +37,8 @@ type point struct {
 type Ring struct {
 	vnodes int
 	hash   HashFunc
-	points []point   // sorted by (hash, owner)
-	nodes  []string  // sorted physical node names
+	points []point  // sorted by (hash, owner)
+	nodes  []string // sorted physical node names
 }
 
 // New returns an empty ring with vnodes points per node and the default
