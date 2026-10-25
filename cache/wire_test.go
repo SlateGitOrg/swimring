@@ -13,7 +13,8 @@ func TestMessageRoundTrip(t *testing.T) {
 		{Op: opPutReq, ID: 1, Key: "k", Entry: e},
 		{Op: opPutReq, ID: 2, Key: "k", Entry: Entry{Deleted: true, Version: Version{Counter: 3, Node: "x"}, Value: []byte{}}},
 		{Op: opGetReq, ID: 3, Key: "k"},
-		{Op: opPutResp, ID: 4, Key: "k", OK: true},
+		{Op: opPutResp, ID: 4, Key: "k", OK: true, Held: Version{Counter: 7, Node: "n2"}},
+		{Op: opPutResp, ID: 7, Key: "k", Held: Version{Counter: 1 << 40, Node: "n3"}},
 		{Op: opGetResp, ID: 5, Key: "k", Found: true, Entry: e},
 		{Op: opGetResp, ID: 6, Key: "k"},
 	} {
@@ -67,13 +68,13 @@ func TestStoreLWWAndTombstones(t *testing.T) {
 		t.Fatal("version order")
 	}
 	now := time.Unix(100, 0)
-	if !s.apply("k", Entry{Value: []byte("1"), Version: v2, Stored: now}) {
+	if ok, held := s.apply("k", Entry{Value: []byte("1"), Version: v2, Stored: now}); !ok || held != v2 {
 		t.Fatal("first write rejected")
 	}
-	if s.apply("k", Entry{Value: []byte("0"), Version: v1}) {
-		t.Fatal("older write accepted")
+	if ok, held := s.apply("k", Entry{Value: []byte("0"), Version: v1}); ok || held != v2 {
+		t.Fatalf("older write: accepted=%v held=%v, want rejected holding %v", ok, held, v2)
 	}
-	if s.apply("k", Entry{Value: []byte("1"), Version: v2}) {
+	if ok, held := s.apply("k", Entry{Value: []byte("1"), Version: v2}); ok || held != v2 {
 		t.Fatal("equal version re-applied")
 	}
 	s.apply("d", Entry{Deleted: true, Version: v1, Stored: now})

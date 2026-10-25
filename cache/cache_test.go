@@ -353,3 +353,56 @@ func TestConfigValidate(t *testing.T) {
 		}
 	}
 }
+
+// TestOrderedWritesThroughDifferentCoordinators is the regression test for a
+// write that was acknowledged but discarded: coordinator A's Lamport counter
+// is far ahead of coordinator B's, A writes k, then (strictly later in real
+// time) B writes k. B's first version is older than A's, so the replicas
+// reject it; B must not count those rejections as acks, and must retry
+// with a version past what the replicas hold, so the later write wins.
+func TestOrderedWritesThroughDifferentCoordinators(t *testing.T) {
+	c := newCluster(t, 6, 9)
+	const ahead, behind = 2, 0 // c02 runs its counter up; c00 is fresh
+	r := c.nodes[0].Cache.Ring()
+	key := ""
+	for i := range 1000 {
+		k := fmt.Sprintf("ordered-%d", i)
+		reps := r.LookupN(k, 3)
+		if !slices.Contains(reps, c.nodes[ahead].Name()) && !slices.Contains(reps, c.nodes[behind].Name()) {
+			key = k
+			break
+		}
+	}
+	if key == "" {
+		t.Fatal("no key with both coordinators off its replica set")
+	}
+	for i := range 10 {
+		if err := c.put(ahead, fmt.Sprintf("warmup-%d", i), "x"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := c.put(ahead, key, "old"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.put(behind, key, "new"); err != nil {
+		t.Fatalf("second ordered write failed: %v", err)
+	}
+	if c.nodes[behind].Cache.Stats().WriteRetries == 0 {
+		t.Fatal("setup: the second write was never rejected, so the test proves nothing")
+	}
+	for i := range c.nodes {
+		if v, ok, err := c.get(i, key); err != nil || !ok || v != "new" {
+			t.Fatalf("get via %s = %q %v %v, want \"new\" (acknowledged write lost)", c.nodes[i].Name(), v, ok, err)
+		}
+	}
+	// Same for a delete issued through a coordinator that is behind.
+	if err := c.put(ahead, key, "again"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.del(behind, key); err != nil {
+		t.Fatal(err)
+	}
+	if v, ok, err := c.get(3, key); ok || err != nil {
+		t.Fatalf("acknowledged delete lost: %q %v %v", v, ok, err)
+	}
+}

@@ -28,7 +28,15 @@ var (
 	ErrValueTooLarge = errors.New("cache: value longer than MaxValueLen")
 	ErrNoReplicas    = errors.New("cache: ring is empty")
 	ErrStopped       = errors.New("cache: node stopped")
+	// ErrConflict means every attempt of a write was rejected by a replica
+	// holding a newer version (concurrent writers to one key kept
+	// overtaking each other). The write may or may not be visible.
+	ErrConflict = errors.New("cache: write superseded by newer versions on every attempt")
 )
+
+// maxWriteAttempts bounds how often a write is re-issued with a higher
+// version after a replica rejected it as older than what it holds.
+const maxWriteAttempts = 4
 
 // Membership is the view of the cluster the cache needs; *swim.Node
 // implements it.
@@ -98,12 +106,17 @@ func (c Config) Validate() error {
 type Stats struct {
 	Puts, Gets, Deletes uint64
 	QuorumFailures      uint64
-	ReadRepairs         uint64
-	HandoffsSent        uint64
-	KeysHandedOff       uint64
-	TombstonesExpired   uint64
-	RequestsServed      uint64
-	MalformedMessages   uint64
+	// WriteRetries counts writes re-issued with a higher version after a
+	// replica rejected them; WriteConflicts counts writes that gave up with
+	// ErrConflict.
+	WriteRetries      uint64
+	WriteConflicts    uint64
+	ReadRepairs       uint64
+	HandoffsSent      uint64
+	KeysHandedOff     uint64
+	TombstonesExpired uint64
+	RequestsServed    uint64
+	MalformedMessages uint64
 }
 
 // Node is one cache replica and request coordinator.
@@ -292,8 +305,16 @@ func quorum(want, replicas int) int {
 }
 
 // PutAsync writes key=value and calls done once WriteQuorum replicas have
-// acknowledged, or with ErrQuorum after RequestTimeout. done runs without
+// stored it, or with ErrQuorum after RequestTimeout. done runs without
 // internal locks held.
+//
+// A replica only acknowledges a version it actually holds. If one answers
+// that it holds a newer version (written through a coordinator whose
+// Lamport counter is ahead of this one), the write is re-issued with a
+// version past it, up to maxWriteAttempts times, then fails with
+// ErrConflict. With WriteQuorum > ReplicationFactor/2 and an unchanged
+// replica set, a write that starts after another write to the same key was
+// acknowledged therefore always gets the higher version and wins.
 func (c *Node) PutAsync(key string, value []byte, done func(error)) {
 	if err := validate(key, value); err != nil {
 		done(err)
@@ -302,7 +323,7 @@ func (c *Node) PutAsync(key string, value []byte, done func(error)) {
 	c.mu.Lock()
 	defer c.unlock()
 	c.stats.Puts++
-	c.write(key, Entry{Value: slices.Clone(value), Version: c.nextVersion()}, done)
+	c.write(key, Entry{Value: slices.Clone(value)}, done)
 }
 
 // DeleteAsync removes key by writing a tombstone with write-quorum
@@ -315,10 +336,11 @@ func (c *Node) DeleteAsync(key string, done func(error)) {
 	c.mu.Lock()
 	defer c.unlock()
 	c.stats.Deletes++
-	c.write(key, Entry{Deleted: true, Version: c.nextVersion()}, done)
+	c.write(key, Entry{Deleted: true}, done)
 }
 
-// write sends e to every replica of key. Must hold mu.
+// write sends e to every replica of key, stamping a fresh version per
+// attempt (see PutAsync for the retry rule). Must hold mu.
 func (c *Node) write(key string, e Entry, done func(error)) {
 	if c.stopped {
 		c.later(func() { done(ErrStopped) })
@@ -330,10 +352,16 @@ func (c *Node) write(key string, e Entry, done func(error)) {
 		return
 	}
 	need := quorum(c.cfg.WriteQuorum, len(replicas))
-	acks := 0
+	attempt := 0
 	finished := false
 	var timer clock.Timer
 	var ids []uint64
+	forget := func() {
+		for _, id := range ids {
+			delete(c.pending, id)
+		}
+		ids = ids[:0]
+	}
 	finish := func(err error) {
 		if finished {
 			return
@@ -342,35 +370,63 @@ func (c *Node) write(key string, e Entry, done func(error)) {
 		if timer != nil {
 			timer.Stop()
 		}
-		for _, id := range ids {
-			delete(c.pending, id)
-		}
-		if err != nil {
+		forget()
+		switch {
+		case errors.Is(err, ErrQuorum):
 			c.stats.QuorumFailures++
+		case errors.Is(err, ErrConflict):
+			c.stats.WriteConflicts++
 		}
 		c.later(func() { done(err) })
 	}
-	ack := func() {
-		acks++
-		if acks >= need {
-			finish(nil)
-		}
-	}
-	for _, r := range replicas {
-		if r == c.self {
-			c.applyLocal(key, e)
-			ack()
-			continue
-		}
-		id, ok := c.request(r, &message{Op: opPutReq, Key: key, Entry: e}, func(m *message) {
-			if m.OK {
-				ack()
+	var try func()
+	try = func() {
+		attempt++
+		this := attempt
+		// Replies to an earlier attempt must not count towards this one.
+		forget()
+		e.Version = c.nextVersion()
+		sent := e
+		acks := 0
+		current := func() bool { return !finished && this == attempt }
+		result := func(held Version) {
+			if !current() {
+				return
 			}
-		})
-		if ok {
-			ids = append(ids, id)
+			if held == sent.Version {
+				acks++
+				if acks >= need {
+					finish(nil)
+				}
+				return
+			}
+			// held is newer: nextVersion now exceeds it (observe ran).
+			if attempt >= maxWriteAttempts {
+				finish(ErrConflict)
+				return
+			}
+			c.stats.WriteRetries++
+			try()
+		}
+		for _, r := range replicas {
+			if !current() {
+				return // a rejection restarted or ended the write
+			}
+			if r == c.self {
+				_, held := c.applyLocal(key, sent)
+				result(held)
+				continue
+			}
+			id, ok := c.request(r, &message{Op: opPutReq, Key: key, Entry: sent}, func(m *message) {
+				c.observe(m.Held)
+				result(m.Held)
+			})
+			if ok {
+				ids = append(ids, id)
+			}
 		}
 	}
+	try()
 	if !finished {
 		timer = c.clk.AfterFunc(c.cfg.RequestTimeout, func() {
 			c.mu.Lock()
@@ -486,10 +542,14 @@ func (c *Node) repair(key string, newest Entry, replicas []string, replies map[s
 	}
 }
 
-func (c *Node) applyLocal(key string, e Entry) bool {
+// applyLocal stores e if it is newer and returns the store's verdict and
+// the version held afterwards. Both versions advance the Lamport clock.
+func (c *Node) applyLocal(key string, e Entry) (bool, Version) {
 	c.observe(e.Version)
 	e.Stored = c.clk.Now()
-	return c.store.apply(key, e)
+	accepted, held := c.store.apply(key, e)
+	c.observe(held)
+	return accepted, held
 }
 
 // later queues f to run after the lock is released.
@@ -538,8 +598,11 @@ func (c *Node) handle(from string, payload []byte) {
 	switch m.Op {
 	case opPutReq:
 		c.stats.RequestsServed++
-		c.applyLocal(m.Key, m.Entry)
-		c.reply(from, &message{Op: opPutResp, ID: m.ID, Key: m.Key, OK: true})
+		// Acknowledge only a version this replica now holds; a rejected
+		// (older) write is answered OK=false with the newer version, so the
+		// coordinator neither counts it nor stays behind.
+		_, held := c.applyLocal(m.Key, m.Entry)
+		c.reply(from, &message{Op: opPutResp, ID: m.ID, Key: m.Key, OK: held == m.Entry.Version, Held: held})
 	case opGetReq:
 		c.stats.RequestsServed++
 		e, ok := c.store.get(m.Key)
@@ -623,7 +686,10 @@ func (c *Node) handOff(ringChanged bool) {
 			var onResp func(*message)
 			if !owned {
 				onResp = func(m *message) {
-					if !m.OK {
+					// Holding v or something newer both make this
+					// copy safe to drop.
+					c.observe(m.Held)
+					if m.Held.Less(v) {
 						return
 					}
 					acks++

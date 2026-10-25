@@ -12,11 +12,18 @@ import (
 //	msg   := version:u8 op:u8 id:varint key:str body
 //	body  := putReq:  entry
 //	       | getReq:  (empty)
-//	       | putResp: ok:u8
+//	       | putResp: ok:u8 counter:varint node:str
 //	       | getResp: found:u8 [entry]
 //	entry := flags:u8 value:bytes counter:varint node:str
+//
+// A putResp carries ok=1 when the replica now holds the version it was sent
+// (accepted, or already held), and in every case the version the replica
+// holds afterwards; ok=0 means it holds a newer one and rejected the write.
+//
+// Version 2 added the held version to putResp (version 1 always answered
+// ok=1, even when the replica had rejected the write).
 
-const cacheWireVersion byte = 1
+const cacheWireVersion byte = 2
 
 type op byte
 
@@ -41,6 +48,8 @@ type message struct {
 	Entry Entry
 	Found bool
 	OK    bool
+	// Held is the replica's version after a put (putResp only).
+	Held Version
 }
 
 func appendBytes(buf, b []byte) []byte {
@@ -69,6 +78,8 @@ func (m *message) encode() []byte {
 		buf = appendEntry(buf, m.Entry)
 	case opPutResp:
 		buf = append(buf, boolByte(m.OK))
+		buf = binary.AppendUvarint(buf, m.Held.Counter)
+		buf = appendBytes(buf, []byte(m.Held.Node))
 	case opGetResp:
 		buf = append(buf, boolByte(m.Found))
 		if m.Found {
@@ -157,6 +168,8 @@ func decodeMessage(b []byte) (*message, error) {
 	case opGetReq:
 	case opPutResp:
 		m.OK = d.byte() == 1
+		m.Held.Counter = d.uvarint()
+		m.Held.Node = string(d.bytes())
 	case opGetResp:
 		m.Found = d.byte() == 1
 		if m.Found {

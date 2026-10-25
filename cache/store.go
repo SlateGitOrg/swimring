@@ -55,14 +55,16 @@ type store struct {
 func newStore() *store { return &store{data: make(map[string]Entry)} }
 
 // apply stores e if it is newer than what the replica holds. It reports
-// whether the entry was accepted.
-func (s *store) apply(key string, e Entry) bool {
+// whether the entry was accepted and the version the replica holds
+// afterwards: e.Version when accepted or already held, otherwise the newer
+// version that made the replica reject e.
+func (s *store) apply(key string, e Entry) (accepted bool, held Version) {
 	cur, ok := s.data[key]
 	if ok && !cur.Version.Less(e.Version) {
-		return false
+		return false, cur.Version
 	}
 	s.data[key] = e
-	return true
+	return true, e.Version
 }
 
 func (s *store) get(key string) (Entry, bool) {
