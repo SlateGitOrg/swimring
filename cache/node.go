@@ -228,13 +228,19 @@ func (c *Node) unlock() {
 // HandleMembership updates the ring from a SWIM event and schedules a
 // rebalance. Suspect members stay on the ring; only Dead/Left members are
 // removed, so a transient suspicion does not shuffle data.
+//
+// The event only says which member changed: its current state is re-read
+// from the membership layer, so events delivered out of order by concurrent
+// goroutines (possible with the real clock) cannot leave the ring stale.
 func (c *Node) HandleMembership(ev swim.Event) {
 	name := ev.Member.Name
 	if name == c.self {
 		return
 	}
+	cur, known := c.mem.Member(name)
+	live := known && cur.State.Live()
 	prev, next := c.ring.Update(func(r *ring.Ring) *ring.Ring {
-		if ev.Member.State.Live() {
+		if live {
 			nr, err := r.Add(name)
 			if err != nil {
 				return r

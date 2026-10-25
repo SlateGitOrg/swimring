@@ -95,3 +95,15 @@ func TestNodeLeave(t *testing.T) {
 		t.Fatalf("output: %s", out.String())
 	}
 }
+
+// TestDemoUDP runs the real-socket, wall-clock part of the demo (also under
+// the race detector in make check).
+func TestDemoUDP(t *testing.T) {
+	var out bytes.Buffer
+	if err := udpDemo(&out); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "5/5 keys still readable") {
+		t.Fatalf("output:\n%s", out.String())
+	}
+}
