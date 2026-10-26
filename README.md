@@ -369,7 +369,7 @@ sim/              deterministic network simulator and virtual clock
 clock/            injectable clock (real and virtual)
 experiment/       seeded experiments behind results/EVAL.md
 cmd/swimring/     CLI: sim, eval, demo, node
-docs/             ARCHITECTURE.md; DECISIONS.md records design rulings
+docs/             ARCHITECTURE.md; DECISIONS.md records design decisions
 ```
 
 ## Limitations
